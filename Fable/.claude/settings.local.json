@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git -C C:\\\\Users\\\\pv\\\\.copilot\\\\repos\\\\Codeoba diff --stat)",
+      "PowerShell(powershell -ExecutionPolicy Bypass -File C:\\\\Dev\\\\GitHub\\\\LookAtWhatAiCanDo\\\\ComposeDesktopTouch\\\\Fable\\\\scratch\\\\TouchInject.ps1 -Mode drag -X1 0.16 -Y1 0.7 -X2 0.16 -Y2 0.3 -Steps 30 -DelayMs 8; Start-Sleep -Milliseconds 800; Get-Content \"C:\\\\Users\\\\pv\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Dev-GitHub-LookAtWhatAiCanDo-ComposeDesktopTouch-Fable\\\\320ae0cd-3a33-4731-abe1-e77a398a1ea6\\\\tasks\\\\bo1e2j7b2.output\" -Tail 12)"
+    ]
+  }
+}
