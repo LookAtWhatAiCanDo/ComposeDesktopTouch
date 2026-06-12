@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.LocalScrollbarStyle
+import androidx.compose.foundation.defaultScrollbarStyle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -118,10 +120,17 @@ fun main() = application {
                 surface = Color(0xFF151922)
             )
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize().background(Color(0xFF0B0D13)),
-                color = Color(0xFF0B0D13)
+            CompositionLocalProvider(
+                LocalScrollbarStyle provides defaultScrollbarStyle().copy(
+                    shape = RoundedCornerShape(4.dp),
+                    unhoverColor = Color.White.copy(alpha = 0.3f),
+                    hoverColor = Color(0xFF00E5FF).copy(alpha = 0.8f)
+                )
             ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize().background(Color(0xFF0B0D13)),
+                    color = Color(0xFF0B0D13)
+                ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -606,6 +615,7 @@ fun main() = application {
                         }
                     }
                 }
+            }
             }
         }
     }
