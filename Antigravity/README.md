@@ -1,7 +1,20 @@
-# Compose Desktop Touch (compose-desktop-touch)
+# Compose Desktop Touch Support for Windows
 
-A standalone, self-contained Kotlin Multiplatform library adding native Windows
-touchscreen and stylus support to Jetpack/JetBrains Compose for Desktop.
+This multi-project repository adds native Windows touchscreen and stylus support to
+Jetpack/JetBrains Compose for Desktop applications. It contains a decoupled library
+module and a sandbox demonstration application.
+
+## Repository Structure
+
+The repository is organized into the following modules:
+1. **[:compose-desktop-touch](file:///c:/Dev/GitHub/LookAtWhatAiCanDo/ComposeDesktopTouch/Antigravity/compose-desktop-touch)**:
+   A standalone, self-contained library module that implements Win32 WndProc
+   subclassing using JNA and provides Compose modifiers for touch interaction.
+2. **[:touch-demo](file:///c:/Dev/GitHub/LookAtWhatAiCanDo/ComposeDesktopTouch/Antigravity/touch-demo)**:
+   A sandbox application that lets you verify touch behaviors (1:1 dragging, fling
+   inertia, click synthesis) and displays real-time `WM_POINTER` events.
+
+---
 
 ## Key Features
 
@@ -100,20 +113,21 @@ implements a three-tier pointer interception pipeline:
    of all registered containers in **reverse composition order** (the last
    composed elements / front-most overlays are hit-tested first).
 3. **Selective Event Consumption**:
-   *   **Scrollable Containers (`Modifier.touchScrollable`)**: If the touch-down
-       coordinate falls inside a registered scrollable bounds, the `pointerId` is
-       captured, and subsequent movement/up events are consumed (`LRESULT(0)`).
-       Raw movements are routed directly to the Compose scroll animation pipeline
-       to drive 1:1 dragging and velocity-based momentum flinging.
-   *   **Scrims & Dialogs (`Modifier.touchScrim`)**: If the touch-down coordinate
-       falls inside a registered dialog scrim, it matches the scrim region first
-       due to reverse order hit-testing. However, because scrims are registered
-       as non-consuming, JNA bypasses capture.
-   *   **AWT Mouse Promotion**: Any touch event that is not consumed (including
-       touches on non-consuming dialog scrims, buttons, text fields, or areas
-       outside scrollable containers) falls back to default OS behavior.
-       Windows automatically mouse-promotes the pointer events into standard AWT
-       mouse events (press, drag, release), ensuring controls receive clicks and focus normally.
+   * **Scrollable Containers (`Modifier.touchScrollable`)**: If the touch-down
+     coordinate falls inside a registered scrollable bounds, the `pointerId` is
+     captured, and subsequent movement/up events are consumed (`LRESULT(0)`).
+     Raw movements are routed directly to the Compose scroll animation pipeline
+     to drive 1:1 dragging and velocity-based momentum flinging.
+   * **Scrims & Dialogs (`Modifier.touchScrim`)**: If the touch-down coordinate
+     falls inside a registered dialog scrim, it matches the scrim region first
+     due to reverse order hit-testing. However, because scrims are registered
+     as non-consuming, JNA bypasses capture.
+   * **AWT Mouse Promotion**: Any touch event that is not consumed (including
+     touches on non-consuming dialog scrims, buttons, text fields, or areas
+     outside scrollable containers) falls back to default OS behavior.
+     Windows automatically mouse-promotes the pointer events into standard AWT
+     mouse events (press, drag, release), ensuring controls receive clicks and
+     focus normally.
 
 ---
 
@@ -196,8 +210,44 @@ fun MyDialog(onClose: () -> Unit) {
     }
 }
 ```
+### 4. Priority Layering (Modal Overlays)
 
-### 4. Custom Drag-to-Scroll Helper Modifier
+By default, both `touchScrollable` and `touchScrim` calculate their visual Z-order priority using their structural nesting layout depth (traversing up from the node to the window root). However, because foreground modal dialogs/overlays (which are often composed at the window root level) can have a shallower nesting depth than background elements (which may be deeply nested inside scaffold layouts, columns, and lists), layout depth alone is not always representative of drawing order.
+
+To ensure foreground overlays always win the hit-test over background elements, you can pass a custom `priority` offset (default is `0`):
+
+```kotlin
+// 1. Mark the overlay root scrim with priority = 1
+Box(
+    modifier = Modifier
+        .fillMaxSize()
+        .touchScrim(priority = 1) // Elevates hit-testing priority
+) {
+    // 2. Mark any scrollable lists inside the overlay with priority = 1
+    LazyColumn(
+        state = overlayListState,
+        modifier = Modifier
+            .fillMaxSize()
+            .touchScrollable(overlayListState, priority = 1)
+    ) {
+        // Items...
+    }
+}
+```
+
+This prevents background lists from hijacking touch interactions and ensures checkboxes, buttons, and scrollable content inside modal cards respond to touches normally.
+
+#### Rationale & Design Trade-offs of the `priority` Parameter
+
+While a manual `priority` parameter (analogous to CSS `z-index` or Compose's `Modifier.zIndex()`) requires developers to have pre-facto knowledge of overlapping layers, it is currently the most pragmatic and robust design for this low-level workaround:
+
+1. **Native Interception Encapsulation**: Because this library subclasses native Win32 window procedures (`WndProc`) using JNA, touch hit-testing is performed *outside* Compose's internal event-routing system. At the OS message loop level, the library is blind to Compose's runtime drawing order.
+2. **Encapsulated Compose API Constraints**: In Compose Multiplatform, public layout APIs (like `LayoutCoordinates`) do not expose child references or visual Z-order properties. Automating sibling Z-ordering without manual priority would require reflection on internal Compose classes (like `LayoutNode` or `NodeCoordinator`), which is fragile and subject to breaking change during Compose runtime updates.
+3. **Decoupled Performance**: Manual priority enables fast, constant-time `O(1)` coordinate matching in JNA callbacks without tree-traversal reflection overhead.
+
+For large-scale applications with multiple stacked modal cards, we recommend standardizing on layout constants (e.g., `priority = Layer.Modal`) rather than magic integers to keep the code maintainable.
+
+### 5. Custom Drag-to-Scroll Helper Modifier
 
 To combine touch scrolling (`touchScrollable`) with desktop mouse dragging
 (e.g. using `draggable`), you can write a helper modifier extension:
@@ -231,6 +281,41 @@ fun Modifier.dragToScroll(
 
 ---
 
+## Running the Sandbox Demo App
+
+The repository includes a `:touch-demo` subproject containing a sandbox to test
+and visual-check touch scroll, fling, and click behaviors:
+
+1. Open a terminal inside the project's root folder.
+2. Run the application using the Gradle wrapper:
+   ```bash
+   ./gradlew :touch-demo:run
+   ```
+3. The demo window displays:
+   * A **LazyColumn** list and a **Regular Scrollable Column** demonstrating smooth
+     direct-touch scrolling.
+   * A **Live WM_POINTER Event Logger** showing real-time pointer coordinates
+     and touch phases (Down/Update/Up) as you contact the screen.
+
+### Manual Verification Test Matrix
+
+To verify the touch support behavior, run the demo on a Windows touchscreen device and execute the following manual tests:
+
+| Test Case | Global Hook (WndProc) | Overlay Dialog | Scrim Hook | Column Hook (Lazy/Reg) | Event List Hook | Input Gesture | Target Element / Region | Expected Behavior |
+|---|---|---|---|---|---|---|---|---|
+| **1. Baseline OS Mode** | **Disabled** | Hidden | N/A | N/A | N/A | Touch Drag | Lazy/Regular Column | OS mouse-promotion (drag-selects text or triggers jittery drag; no inertial fling). |
+| **2. Touch Scroll ON** | **Enabled** | Hidden | N/A | **Enabled** | N/A | Touch Drag | Lazy/Regular Column | Smooth 1:1 scroll tracking and kinetic momentum fling scrolling on release. |
+| **3. Touch Scroll OFF** | **Enabled** | Hidden | N/A | **Disabled** | N/A | Touch Drag | Lazy/Regular Column | Custom scrolling is bypassed; component falls back to standard mouse-promotion. |
+| **4. Tap-to-Click** | **Enabled** | Hidden | N/A | N/A | N/A | Touch Tap | Any list item / Card | Synthesizes a mouse click event immediately (triggers actions without scrolling). |
+| **5. Overlay Scrim Block** | **Enabled** | **Shown** | **Enabled** | N/A | N/A | Touch Drag | Dialog Card / Scrim Area | Background columns do NOT scroll. Checkboxes and close buttons inside card tap natively. |
+| **6. Overlay Scrim Pass** | **Enabled** | **Shown** | **Disabled** | N/A | N/A | Touch Drag | Dialog Card / Scrim Area | Background columns underneath the overlay scroll dynamically (pass-through). |
+| **7. Overlay List Scroll** | **Enabled** | **Shown** | **Enabled** | N/A | **Enabled** | Touch Drag | Overlay LazyColumn | Scrollable list inside the overlay scrolls smoothly with custom momentum physics. |
+| **8. Event Log Scroll** | **Enabled** | Hidden/Shown | N/A | N/A | **Always ON** | Touch Drag | Live Event Logs Column | Logs list scrolls smoothly. Scrolling this list does NOT append log entries to itself. |
+| **9. Hook Toggle Lifecycle** | **Toggle Off & ON** | Hidden | N/A | **Enabled** | N/A | Touch Drag | Lazy/Regular Column | Turning the global hook off and back on leaves scrolling fully functional. |
+| **10. Mouse & Scrollbar** | N/A | Hidden/Shown | N/A | N/A | N/A | Mouse Drag/Wheel | Any list or scrollbar | Traditional mouse inputs and scrollbars scroll all columns normally. |
+
+---
+
 ## Contributing
 
 Contributions are welcome! If you encounter any bugs, have feature requests,
@@ -241,12 +326,12 @@ or want to improve the Windows touch/gesture experience, please:
 
 ## Acknowledgments & Prior Art
 
-*   [Java Native Access (JNA)](https://github.com/java-native-access/jna) for
-    enabling low-level Win32 window procedure subclassing without writing custom
-    C/C++ DLLs.
-*   The JetBrains team for their ongoing work on Compose Multiplatform.
-*   Prior art demonstrating native Win32 `WM_POINTER` interception and coordinate
-    translation within the JVM.
+* [Java Native Access (JNA)](https://github.com/java-native-access/jna) for
+  enabling low-level Win32 window procedure subclassing without writing custom
+  C/C++ DLLs.
+* The JetBrains team for their ongoing work on Compose Multiplatform.
+* Prior art demonstrating native Win32 `WM_POINTER` interception and coordinate
+  translation within the JVM.
 
 ## License
 

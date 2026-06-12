@@ -103,18 +103,24 @@ private object Win32Holder {
 }
 
 object Win32TouchRegistry {
-    class HitTestRegion(val id: Any, var rect: Rectangle, var consumeTouch: Boolean = true)
+    class HitTestRegion(
+        val id: Any,
+        var rect: Rectangle,
+        var consumeTouch: Boolean = true,
+        var depth: Int = 0
+    )
     val regions = ConcurrentHashMap<HWND, CopyOnWriteArrayList<HitTestRegion>>()
     private val activePointerIds = ConcurrentHashMap.newKeySet<Int>()
 
-    fun registerRegion(hWnd: HWND, id: Any, rect: Rectangle, consumeTouch: Boolean = true) {
+    fun registerRegion(hWnd: HWND, id: Any, rect: Rectangle, consumeTouch: Boolean = true, depth: Int = 0) {
         val list = regions.computeIfAbsent(hWnd) { CopyOnWriteArrayList() }
         val existing = list.firstOrNull { it.id == id }
         if (existing != null) {
             existing.rect = rect
             existing.consumeTouch = consumeTouch
+            existing.depth = depth
         } else {
-            list.add(HitTestRegion(id, rect, consumeTouch))
+            list.add(HitTestRegion(id, rect, consumeTouch, depth))
         }
     }
 
@@ -122,9 +128,15 @@ object Win32TouchRegistry {
         regions[hWnd]?.removeIf { it.id == id }
     }
 
+    fun hitTest(hWnd: HWND, x: Int, y: Int): HitTestRegion? {
+        return regions[hWnd]?.filter { it.rect.contains(x, y) }
+            ?.maxByOrNull { it.depth }
+    }
+
     private val listeners = ConcurrentHashMap<HWND, CopyOnWriteArrayList<(TouchEvent) -> Unit>>()
     private val prevWndProcs = ConcurrentHashMap<HWND, Pointer>()
     private val subclassCallbacks = ConcurrentHashMap<HWND, WindowProc>()
+    private val callbackRetentionSet = ConcurrentHashMap.newKeySet<WindowProc>()
     private const val GWL_WNDPROC = -4
 
     fun registerListener(hWnd: HWND, listener: (TouchEvent) -> Unit) {
@@ -142,7 +154,10 @@ object Win32TouchRegistry {
                     lParam: LPARAM
                 ): LRESULT {
                     val user32 = com.sun.jna.platform.win32.User32.INSTANCE
-                    val prevProc = prevWndProcs[hWnd] ?: return LRESULT(0)
+                    val prevProc = prevWndProcs[hWnd]
+                    if (prevProc == null) {
+                        return user32.DefWindowProc(hWnd, uMsg, wParam, lParam)
+                    }
                     
                     when (uMsg) {
                         WM_POINTERDOWN, WM_POINTERUPDATE, WM_POINTERUP -> {
@@ -170,8 +185,7 @@ object Win32TouchRegistry {
                                     val isCaptured = activePointerIds.contains(pointerId)
 
                                     val shouldConsume = if (uMsg == WM_POINTERDOWN) {
-                                        val hitList = regions[rootHwnd]
-                                        val matchedRegion = hitList?.lastOrNull { it.rect.contains(ptChild.x, ptChild.y) }
+                                        val matchedRegion = hitTest(rootHwnd, ptChild.x, ptChild.y)
                                         if (matchedRegion != null && matchedRegion.consumeTouch) {
                                             activePointerIds.add(pointerId)
                                             true
@@ -203,10 +217,20 @@ object Win32TouchRegistry {
                                             timeMs = pointerInfo.dwTime.toLong() and 0xFFFFFFFFL
                                         )
 
-                                        listeners[hWnd]?.forEach { it(event) }
-                                        if (rootHwnd != hWnd) {
-                                            listeners[rootHwnd]?.forEach { it(event) }
-                                        }
+                                         val targets = mutableListOf<(TouchEvent) -> Unit>()
+                                         listeners[hWnd]?.let { targets.addAll(it) }
+                                         if (rootHwnd != hWnd) {
+                                             listeners[rootHwnd]?.let { targets.addAll(it) }
+                                         }
+                                         if (targets.isNotEmpty()) {
+                                             if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+                                                 targets.forEach { it(event) }
+                                             } else {
+                                                 javax.swing.SwingUtilities.invokeLater {
+                                                     targets.forEach { it(event) }
+                                                 }
+                                             }
+                                         }
 
                                         if (uMsg == WM_POINTERUP || phase == TouchPhase.CANCEL) {
                                             activePointerIds.remove(pointerId)
@@ -226,7 +250,10 @@ object Win32TouchRegistry {
             
             // Set new WndProc using SetWindowLongPtr and store the old one
             val oldProc = user32.SetWindowLongPtr(hWnd, GWL_WNDPROC, callbackPointer)
-            prevWndProcs[hWnd] = oldProc
+            if (oldProc != null && Pointer.nativeValue(oldProc) != 0L) {
+                prevWndProcs[hWnd] = oldProc
+                callbackRetentionSet.add(callback) // Keep it alive forever to prevent GC trampoline crashes
+            }
             
             val classNameArr = CharArray(256)
             Win32Holder.user32?.GetClassNameW(hWnd, classNameArr, 256)
@@ -244,10 +271,11 @@ object Win32TouchRegistry {
         if (list.isEmpty()) {
             listeners.remove(hWnd)
             val callback = subclassCallbacks.remove(hWnd)
-            val oldProc = prevWndProcs.remove(hWnd)
+            val oldProc = prevWndProcs[hWnd]
             if (callback != null && oldProc != null) {
                 val user32 = com.sun.jna.platform.win32.User32.INSTANCE
                 user32.SetWindowLongPtr(hWnd, GWL_WNDPROC, oldProc)
+                prevWndProcs.remove(hWnd)
                 println("Win32TouchRegistry: Unsubclassed HWND $hWnd, restored oldProc: $oldProc")
             }
         }

@@ -41,8 +41,12 @@ open class TouchInstallation {
 
 private class RealTouchInstallation(val window: ComposeWindow, val hWnd: HWND) : TouchInstallation() {
     private val listener: (TouchEvent) -> Unit = { event ->
-        javax.swing.SwingUtilities.invokeLater {
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
             handleNativeTouchEvent(event)
+        } else {
+            javax.swing.SwingUtilities.invokeLater {
+                handleNativeTouchEvent(event)
+            }
         }
     }
 
@@ -84,11 +88,11 @@ private class RealTouchInstallation(val window: ComposeWindow, val hWnd: HWND) :
 
         when (event.phase) {
             TouchPhase.DOWN -> {
-                val target = activeContainers.lastOrNull { container ->
+                val target = activeContainers.filter { container ->
                     val contains = container.boundsInWindow.contains(point)
                     println("  Hit-test container: bounds = ${container.boundsInWindow}, contains = $contains")
                     contains
-                }
+                }.maxByOrNull { it.depth }
                 if (target != null) {
                     println("  Selected container target: bounds = ${target.boundsInWindow}")
                     target.activePointerId = event.id
@@ -216,6 +220,7 @@ internal class TouchContainer(
     val density: Density
 ) {
     var boundsInWindow: Rect = Rect.Zero
+    var depth: Int = 0
     val velocityTracker = VelocityTracker()
     
     var activePointerId: Int? = null
@@ -273,7 +278,6 @@ object WindowsTouch {
 
     internal fun removeInstallation(hWnd: HWND) {
         installations.remove(hWnd)
-        containers.remove(hWnd)
     }
 }
 
@@ -283,7 +287,8 @@ object WindowsTouch {
 fun Modifier.touchScrollable(
     state: ScrollableState,
     orientation: Orientation = Orientation.Vertical,
-    flingDecay: DecayAnimationSpec<Float>? = null
+    flingDecay: DecayAnimationSpec<Float>? = null,
+    priority: Int = 0
 ): Modifier = this.composed {
     if (!System.getProperty("os.name").contains("Windows", ignoreCase = true)) {
         return@composed this
@@ -320,13 +325,21 @@ fun Modifier.touchScrollable(
             val bounds = coordinates.boundsInWindow()
             container.boundsInWindow = bounds
             
+            var depth = priority * 10000
+            var curr: androidx.compose.ui.layout.LayoutCoordinates? = coordinates
+            while (curr != null) {
+                depth++
+                curr = curr.parentLayoutCoordinates
+            }
+            container.depth = depth
+            
             val rect = java.awt.Rectangle(
                 bounds.left.toInt(),
                 bounds.top.toInt(),
                 bounds.width.toInt(),
                 bounds.height.toInt()
             )
-            Win32TouchRegistry.registerRegion(hWnd, container, rect)
+            Win32TouchRegistry.registerRegion(hWnd, container, rect, depth = depth)
         }
 }
 
@@ -336,7 +349,7 @@ fun Modifier.touchScrollable(
  * and will instead be delegated back to standard OS mouse-promotion so AWT
  * controls (buttons, text fields, sliders) receive touch clicks and drags normally.
  */
-fun Modifier.touchScrim(): Modifier = this.composed {
+fun Modifier.touchScrim(priority: Int = 0): Modifier = this.composed {
     if (!System.getProperty("os.name").contains("Windows", ignoreCase = true)) {
         return@composed this
     }
@@ -357,12 +370,20 @@ fun Modifier.touchScrim(): Modifier = this.composed {
 
     this.onGloballyPositioned { coordinates ->
         val bounds = coordinates.boundsInWindow()
+        
+        var depth = priority * 10000
+        var curr: androidx.compose.ui.layout.LayoutCoordinates? = coordinates
+        while (curr != null) {
+            depth++
+            curr = curr.parentLayoutCoordinates
+        }
+        
         val rect = java.awt.Rectangle(
             bounds.left.toInt(),
             bounds.top.toInt(),
             bounds.width.toInt(),
             bounds.height.toInt()
         )
-        Win32TouchRegistry.registerRegion(hWnd, regionId, rect, consumeTouch = false)
+        Win32TouchRegistry.registerRegion(hWnd, regionId, rect, consumeTouch = false, depth = depth)
     }
 }
