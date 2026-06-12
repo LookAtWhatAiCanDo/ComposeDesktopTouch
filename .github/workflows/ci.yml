@@ -39,13 +39,17 @@ jobs:
       - name: Compile and Run Unit Tests
         run: ./gradlew :compose-desktop-touch:desktopTest
 
-      - name: Build Demo Application
-        run: ./gradlew :touch-demo:packageUberJarForCurrentOS
+      - name: Build Demo Application and Library
+        run: ./gradlew :touch-demo:packageUberJarForCurrentOS :compose-desktop-touch:assemble :compose-desktop-touch:desktopSourcesJar :compose-desktop-touch:dokkaJavadocJar
 
-      - name: Upload Demo App Artifact
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: touch-demo-windows-x64
-          path: Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+          name: compose-desktop-touch-release
+          path: |
+            Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-desktop-*.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-*-javadoc.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-metadata-*.jar
           if-no-files-found: error
 

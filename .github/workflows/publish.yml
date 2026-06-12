@@ -85,15 +85,19 @@ jobs:
           distribution: 'jetbrains'
           cache: gradle
 
-      - name: Build Demo App Uber JAR
+      - name: Build Demo App and Library JARs
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          ./gradlew :touch-demo:packageUberJarForCurrentOS -PreleaseVersion="$VERSION"
+          ./gradlew :touch-demo:packageUberJarForCurrentOS :compose-desktop-touch:assemble :compose-desktop-touch:desktopSourcesJar :compose-desktop-touch:dokkaJavadocJar -PreleaseVersion="$VERSION"
 
-      - name: Create Release and Upload Asset
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v3
         with:
-          files: Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+          files: |
+            Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-desktop-*.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-*-javadoc.jar
+            Antigravity/compose-desktop-touch/build/libs/compose-desktop-touch-metadata-*.jar
           fail_on_unmatched_files: true
           generate_release_notes: true
         env:
