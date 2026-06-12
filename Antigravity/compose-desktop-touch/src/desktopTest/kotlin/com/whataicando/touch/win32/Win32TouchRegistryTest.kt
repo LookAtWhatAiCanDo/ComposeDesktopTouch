@@ -1,4 +1,4 @@
-package llc.lookatwhataicando.touch.win32
+package com.whataicando.touch.win32
 
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinDef.HWND

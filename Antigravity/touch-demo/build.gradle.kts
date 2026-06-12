@@ -26,7 +26,7 @@ kotlin {
 compose {
     desktop {
         application {
-            mainClass = "llc.lookatwhataicando.touch.demo.MainKt"
+            mainClass = "com.whataicando.touch.demo.MainKt"
         }
     }
 }

@@ -139,7 +139,7 @@ Call `WindowsTouch.install` in your application setup once the AWT window
 becomes displayable:
 
 ```kotlin
-import llc.lookatwhataicando.touch.compose.WindowsTouch
+import com.whataicando.touch.compose.WindowsTouch
 
 Window(
     onCloseRequest = ::exitApplication,
@@ -164,7 +164,7 @@ Apply `.touchScrollable` to scrollable containers (e.g., `LazyColumn`, `Column`
 with `verticalScroll`) alongside mouse/scrollbar support:
 
 ```kotlin
-import llc.lookatwhataicando.touch.compose.touchScrollable
+import com.whataicando.touch.compose.touchScrollable
 
 val lazyListState = rememberLazyListState()
 
@@ -187,7 +187,7 @@ so that standard controls inside the dialog receive mouse-promoted events, and
 underlying background lists do not scroll:
 
 ```kotlin
-import llc.lookatwhataicando.touch.compose.touchScrim
+import com.whataicando.touch.compose.touchScrim
 
 @Composable
 fun MyDialog(onClose: () -> Unit) {
@@ -259,7 +259,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.ui.composed
-import llc.lookatwhataicando.touch.compose.touchScrollable
+import com.whataicando.touch.compose.touchScrollable
 
 fun Modifier.dragToScroll(
     lazyListState: LazyListState,

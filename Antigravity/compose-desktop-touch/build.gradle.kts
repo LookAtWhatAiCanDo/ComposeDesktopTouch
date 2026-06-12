@@ -28,5 +28,5 @@ kotlin {
     }
 }
 
-group = "llc.lookatwhataicando"
+group = "com.whataicando"
 version = "0.1.0"

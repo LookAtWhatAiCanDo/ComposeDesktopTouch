@@ -1,4 +1,4 @@
-package llc.lookatwhataicando.touch.demo
+package com.whataicando.touch.demo
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,12 +29,12 @@ import androidx.compose.ui.window.application
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinDef.HWND
 import kotlinx.coroutines.delay
-import llc.lookatwhataicando.touch.compose.WindowsTouch
-import llc.lookatwhataicando.touch.compose.touchScrollable
-import llc.lookatwhataicando.touch.compose.touchScrim
-import llc.lookatwhataicando.touch.compose.TouchInstallation
-import llc.lookatwhataicando.touch.win32.TouchEvent
-import llc.lookatwhataicando.touch.win32.Win32TouchRegistry
+import com.whataicando.touch.compose.WindowsTouch
+import com.whataicando.touch.compose.touchScrollable
+import com.whataicando.touch.compose.touchScrim
+import com.whataicando.touch.compose.TouchInstallation
+import com.whataicando.touch.win32.TouchEvent
+import com.whataicando.touch.win32.Win32TouchRegistry
 
 fun main() = application {
     Window(
@@ -59,7 +59,7 @@ fun main() = application {
         val logListener: (TouchEvent) -> Unit = remember {
             { event ->
                 val bounds = eventListBounds
-                if (event.phase == llc.lookatwhataicando.touch.win32.TouchPhase.DOWN) {
+                if (event.phase == com.whataicando.touch.win32.TouchPhase.DOWN) {
                     val isInside = bounds?.contains(androidx.compose.ui.geometry.Offset(event.xPx, event.yPx)) == true
                     if (isInside) {
                         activeEventListPointers.add(event.id)
@@ -68,8 +68,8 @@ fun main() = application {
                 
                 val shouldIgnore = activeEventListPointers.contains(event.id)
                 
-                if (event.phase == llc.lookatwhataicando.touch.win32.TouchPhase.UP || 
-                    event.phase == llc.lookatwhataicando.touch.win32.TouchPhase.CANCEL) {
+                if (event.phase == com.whataicando.touch.win32.TouchPhase.UP || 
+                    event.phase == com.whataicando.touch.win32.TouchPhase.CANCEL) {
                     activeEventListPointers.remove(event.id)
                 }
                 
@@ -422,9 +422,9 @@ fun main() = application {
                                                     Text(
                                                         text = "ID: ${event.id} | ${event.phase} | (${event.xPx.toInt()}, ${event.yPx.toInt()})",
                                                         color = when(event.phase) {
-                                                            llc.lookatwhataicando.touch.win32.TouchPhase.DOWN -> Color(0xFF10B981)
-                                                            llc.lookatwhataicando.touch.win32.TouchPhase.UP -> Color(0xFFEF4444)
-                                                            llc.lookatwhataicando.touch.win32.TouchPhase.CANCEL -> Color(0xFFFBBF24)
+                                                            com.whataicando.touch.win32.TouchPhase.DOWN -> Color(0xFF10B981)
+                                                            com.whataicando.touch.win32.TouchPhase.UP -> Color(0xFFEF4444)
+                                                            com.whataicando.touch.win32.TouchPhase.CANCEL -> Color(0xFFFBBF24)
                                                             else -> Color(0xFF94A3B8)
                                                         },
                                                         fontSize = 11.sp,

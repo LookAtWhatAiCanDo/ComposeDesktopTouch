@@ -1,6 +1,6 @@
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 
-package llc.lookatwhataicando.touch.compose
+package com.whataicando.touch.compose
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.DecayAnimationSpec
@@ -31,9 +31,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import llc.lookatwhataicando.touch.win32.TouchEvent
-import llc.lookatwhataicando.touch.win32.TouchPhase
-import llc.lookatwhataicando.touch.win32.Win32TouchRegistry
+import com.whataicando.touch.win32.TouchEvent
+import com.whataicando.touch.win32.TouchPhase
+import com.whataicando.touch.win32.Win32TouchRegistry
 
 open class TouchInstallation {
     open fun uninstall() {}

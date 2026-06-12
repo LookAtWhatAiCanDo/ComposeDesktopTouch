@@ -1,4 +1,4 @@
-package llc.lookatwhataicando.touch.win32
+package com.whataicando.touch.win32
 
 import com.sun.jna.Native
 import com.sun.jna.Pointer
