@@ -1,5 +1,9 @@
 # Compose Desktop Touch Support for Windows
 
+[![CI Build & Test](https://github.com/LookAtWhatAiCanDo/ComposeDesktopTouch/actions/workflows/ci.yml/badge.svg)](https://github.com/LookAtWhatAiCanDo/ComposeDesktopTouch/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/com.whataicando/compose-desktop-touch.svg)](https://search.maven.org/artifact/com.whataicando/compose-desktop-touch)
+[![License](https://img.shields.io/github/license/LookAtWhatAiCanDo/ComposeDesktopTouch.svg)](https://github.com/LookAtWhatAiCanDo/ComposeDesktopTouch/blob/master/LICENSE)
+
 This repository contains implementations designed to add native Windows
 touchscreen and stylus support (smooth 1:1 panning, inertial flinging,
 click synthesis, and modal priority hit-testing) to Jetpack/JetBrains
