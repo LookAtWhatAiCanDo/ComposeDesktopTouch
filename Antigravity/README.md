@@ -281,6 +281,111 @@ fun Modifier.dragToScroll(
 
 ---
 
+## API Reference
+
+### `Modifier.touchScrollable`
+
+Registers a container's bounds and scroll state for Win32 touch hit-testing,
+enabling custom kinetic touchscreen scroll and fling behaviors on Windows.
+
+```kotlin
+fun Modifier.touchScrollable(
+    state: ScrollableState,
+    orientation: Orientation = Orientation.Vertical,
+    flingDecay: DecayAnimationSpec<Float>? = null,
+    priority: Int = 0
+): Modifier
+```
+
+**Description**
+
+This modifier hooks into the subclassed Win32 window message loop to capture
+native `WM_POINTERDOWN`, `WM_POINTERUPDATE`, and `WM_POINTERUP` touch inputs
+falling within the layout node's screen boundaries. It bypasses AWT's default
+mouse-promotion behavior (which lacks smooth movement, tracking, and fling
+inertia) to provide:
+*   Smooth, responsive 1:1 touch dragging.
+*   Kinetic momentum-based scrolling (flinging) when lifting a pointer at speed.
+*   Interrupted fling (instantly canceling active scrolling on touch down).
+*   Automatic tap-to-click mouse event synthesis for tap gestures (<300ms,
+    <10px displacement).
+
+On non-Windows platforms (macOS/Linux), this modifier acts as a clean no-op
+and returns the receiver `Modifier` unaltered.
+
+**Parameters**
+
+*   **`state`** (`ScrollableState`): The state object representing the scroll
+    position and permitting programmatic scrolling. Typically a `LazyListState`
+    (for `LazyColumn` or `LazyRow`) or a `ScrollState` (for columns/rows using
+    `Modifier.verticalScroll` or `Modifier.horizontalScroll`). **Must not be
+    null.**
+*   **`orientation`** (`Orientation`): The scrolling direction of the container.
+    Either `Orientation.Vertical` (default) or `Orientation.Horizontal`.
+*   **`flingDecay`** (`DecayAnimationSpec<Float>?`): Custom decay specification
+    determining the speed and friction of kinetic fling scrolling. If `null`
+    (default), the modifier uses a native `splineBasedDecay` calibrated to the
+    screen's local `Density`.
+*   **`priority`** (`Int`): Visual layer priority group (default is `0`). Since
+    native Windows hit-testing runs out-of-band of the Compose layout tree,
+    hit-testing resolves overlap conflicts using the formula `(priority *
+    10000) + layoutNestingDepth`. Scrollable components within modal dialogue
+    boxes, popups, or bottom sheets should specify `priority = 1` or higher to
+    prevent lower-layer background lists from intercepting touch events.
+
+**Returns**
+
+The modified `Modifier` containing the touch receiver node, or the unmodified
+receiver `Modifier` if not running on the Windows operating system.
+
+---
+
+### `Modifier.touchScrim`
+
+Registers a rectangular boundary as a non-consuming touch blocking region
+(scrim). Touch messages inside this region are skipped by custom touch
+handling and are mouse-promoted natively by the Windows OS.
+
+```kotlin
+fun Modifier.touchScrim(
+    priority: Int = 0
+): Modifier
+```
+
+**Description**
+
+This modifier defines a touch-blocking area (typically applied to modal
+background overlays, dialogue boxes, or card surfaces) that prevents background
+lists from scrolling when touch interactions occur on the foreground element.
+
+Instead of consuming touch events, a scrim registers a non-consuming region
+with the Win32 touch registry. When a touch-down falls within its bounds, the
+hit-test matches the scrim first (due to visual priority/nesting depth) but
+JNA deliberately declines pointer capture. The Windows OS then automatically
+"mouse-promotes" the touch inputs into standard AWT mouse events (`press`,
+`drag`, `release`), allowing conventional Compose/Swing interactive controls
+(buttons, checkboxes, text fields, sliders) to receive mouse clicks, focus, and
+drag-focus normally.
+
+On non-Windows platforms (macOS/Linux), this modifier acts as a clean no-op
+and returns the receiver `Modifier` unaltered.
+
+**Parameters**
+
+*   **`priority`** (`Int`): Visual layer priority group (default is `0`).
+    Elevates the scrim's hit-test matching depth using the formula `(priority
+    * 10000) + layoutNestingDepth`. Dialogue scrims and dialogue card roots
+    should specify `priority = 1` or higher to match first before any
+    background scrollable list coordinates, preventing touch drags on dialogue
+    surfaces from bleeding through and scrolling background lists.
+
+**Returns**
+
+The modified `Modifier` containing the scrim registration node, or the
+unmodified receiver `Modifier` if not running on the Windows operating system.
+
+---
+
 ## Running the Sandbox Demo App
 
 The repository includes a `:touch-demo` subproject containing a sandbox to test
