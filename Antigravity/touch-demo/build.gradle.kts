@@ -1,7 +1,7 @@
 plugins {
-    kotlin("multiplatform")
-    id("org.jetbrains.compose")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.kotlin.compose)
 }
 
 kotlin {
@@ -11,13 +11,10 @@ kotlin {
         val desktopMain by getting {
             dependencies {
                 implementation(project(":compose-desktop-touch"))
-                implementation("net.java.dev.jna:jna:5.14.0")
-                implementation("net.java.dev.jna:jna-platform:5.14.0")
+                implementation(libs.bundles.jna)
                 implementation(compose.desktop.currentOs)
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
-                implementation(compose.ui)
+                implementation(libs.bundles.compose.core)
+                implementation(libs.compose.material3)
             }
         }
     }

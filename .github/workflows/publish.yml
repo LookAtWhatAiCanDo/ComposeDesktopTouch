@@ -1,0 +1,54 @@
+name: Publish to Maven Central
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.1.0)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: 21
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./Antigravity
+
+    steps:
+      - name: Checkout code and submodule(s)
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'jetbrains'
+          cache: gradle
+
+      - run: chmod +x gradlew
+
+      - name: Publish to Maven Central Portal
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          ./gradlew publishAggregationToCentralPortal -PreleaseVersion="$VERSION"
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}

@@ -1,5 +1,3 @@
-@file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
-
 package com.whataicando.touch.compose
 
 import androidx.compose.animation.core.Animatable
@@ -21,7 +19,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.awt.ComposeWindow
-import androidx.compose.ui.window.LocalWindow
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinDef.HWND
 import java.awt.event.InputEvent
@@ -34,6 +31,24 @@ import kotlinx.coroutines.launch
 import com.whataicando.touch.win32.TouchEvent
 import com.whataicando.touch.win32.TouchPhase
 import com.whataicando.touch.win32.Win32TouchRegistry
+
+@Suppress("UNCHECKED_CAST")
+private val LocalWindowInstance: androidx.compose.runtime.CompositionLocal<java.awt.Window?>? by lazy {
+    try {
+        val clazz = Class.forName("androidx.compose.ui.window.LocalAwtWindowKt")
+        val method = clazz.getMethod("getLocalAwtWindow")
+        method.invoke(null) as androidx.compose.runtime.CompositionLocal<java.awt.Window?>
+    } catch (e: Exception) {
+        try {
+            val clazz = Class.forName("androidx.compose.ui.window.LocalWindowKt")
+            val method = clazz.getMethod("getLocalWindow")
+            method.invoke(null) as androidx.compose.runtime.CompositionLocal<java.awt.Window?>
+        } catch (ex: Exception) {
+            println("Win32Touch: Warning - Failed to resolve Compose Window CompositionLocal: ${ex.message}")
+            null
+        }
+    }
+}
 
 open class TouchInstallation {
     open fun uninstall() {}
@@ -294,7 +309,8 @@ fun Modifier.touchScrollable(
         return@composed this
     }
 
-    val window = LocalWindow.current as? ComposeWindow
+    val windowLocal = LocalWindowInstance ?: return@composed this
+    val window = windowLocal.current as? ComposeWindow
         ?: return@composed this
 
     val density = LocalDensity.current
@@ -354,7 +370,8 @@ fun Modifier.touchScrim(priority: Int = 0): Modifier = this.composed {
         return@composed this
     }
 
-    val window = LocalWindow.current as? ComposeWindow
+    val windowLocal = LocalWindowInstance ?: return@composed this
+    val window = windowLocal.current as? ComposeWindow
         ?: return@composed this
 
     val hwndLong = remember(window) { com.sun.jna.Native.getWindowID(window) }
