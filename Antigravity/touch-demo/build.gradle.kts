@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+version = project.findProperty("releaseVersion")?.toString() ?: "0.0.1"
+
 kotlin {
     jvm("desktop")
 

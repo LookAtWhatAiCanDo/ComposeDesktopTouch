@@ -55,3 +55,47 @@ jobs:
           MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_PASSWORD }}
+
+  release:
+    name: Create GitHub Release
+    runs-on: windows-latest
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    env:
+      JAVA_VERSION: 21
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./Antigravity
+
+    steps:
+      - name: Checkout code and submodule(s)
+        uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'jetbrains'
+          cache: gradle
+
+      - name: Build Demo App Uber JAR
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./gradlew :touch-demo:packageUberJarForCurrentOS -PreleaseVersion="$VERSION"
+
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v3
+        with:
+          files: Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -27,17 +27,18 @@ kotlin {
 }
 
 group = "com.whataicando"
-version = libs.versions.release.get()
+version = project.findProperty("releaseVersion")?.toString() ?: "0.0.1"
+
 
 val pomName = "Compose Desktop Touch"
 val pomDescription = "Native Windows touchscreen and stylus support via JNA WndProc subclassing for Jetpack Compose Desktop."
 val pomSiteUrl = "https://github.com/LookAtWhatAiCanDo/ComposeDesktopTouch"
 val pomGitUrl = "github.com/whataicando/ComposeDesktopTouch.git"
-val pomLicenseName = "The MIT License"
-val pomLicenseUrl = "https://raw.githubusercontent.com/LookAtWhatAiCanDo/ComposeDesktopTouch/master/LICENSE"
 val pomDeveloperId = "whataicando"
 val pomDeveloperName = "whataicando"
 val pomDeveloperEmail = "publish@whataicando.com"
+val pomLicenseUrl = "https://raw.githubusercontent.com/LookAtWhatAiCanDo/ComposeDesktopTouch/master/LICENSE"
+val pomLicenseName = "The MIT License"
 
 val dokkaJavadocJar by tasks.registering(Jar::class) {
     group = JavaBasePlugin.DOCUMENTATION_GROUP
@@ -51,7 +52,6 @@ val dokkaJavadocJar by tasks.registering(Jar::class) {
 publishing {
     publications.withType<MavenPublication> {
         artifact(dokkaJavadocJar)
-
         pom {
             name.set(pomName)
             description.set(pomDescription)
@@ -82,9 +82,13 @@ signing {
     val signingKey: String? by project
     val signingPassword: String? by project
     val skipSigning = signingKey == "SKIP" && signingPassword == "SKIP"
-    
     if (!skipSigning) {
         useInMemoryPgpKeys(signingKey, signingPassword)
         sign(publishing.publications)
     }
 }
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    dependsOn(tasks.withType<Sign>())
+}
+

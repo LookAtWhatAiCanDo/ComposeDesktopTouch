@@ -40,4 +40,12 @@ jobs:
         run: ./gradlew :compose-desktop-touch:desktopTest
 
       - name: Build Demo Application
-        run: ./gradlew :touch-demo:assemble
+        run: ./gradlew :touch-demo:packageUberJarForCurrentOS
+
+      - name: Upload Demo App Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: touch-demo-windows-x64
+          path: Antigravity/touch-demo/build/compose/jars/touch-demo-windows-x64-*.jar
+          if-no-files-found: error
+
