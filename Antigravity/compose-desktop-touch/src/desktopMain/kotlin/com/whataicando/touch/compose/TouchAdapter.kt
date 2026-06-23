@@ -180,50 +180,61 @@ private class RealTouchInstallation(val window: ComposeWindow, val hWnd: HWND) :
         }
     }
 
+    private fun windowScale(): Double =
+        window.graphicsConfiguration?.defaultTransform?.scaleX ?: 1.0
+
     private fun synthesizeClick(x: Int, y: Int) {
-        val time = System.currentTimeMillis()
+        val scale = windowScale()
+        val insets = window.insets
+        val windowX = kotlin.math.round(x / scale).toInt() + insets.left
+        val windowY = kotlin.math.round(y / scale).toInt() + insets.top
 
-        // 1. Mouse Pressed
-        val pressEvent = MouseEvent(
-            window,
-            MouseEvent.MOUSE_PRESSED,
-            time,
-            InputEvent.BUTTON1_DOWN_MASK,
-            x,
-            y,
-            1,
-            false,
-            MouseEvent.BUTTON1
-        )
-        window.dispatchEvent(pressEvent)
+        javax.swing.SwingUtilities.invokeLater {
+            val target = javax.swing.SwingUtilities.getDeepestComponentAt(window, windowX, windowY) ?: window
+            val point = javax.swing.SwingUtilities.convertPoint(window, windowX, windowY, target)
+            val queue = java.awt.Toolkit.getDefaultToolkit().systemEventQueue
+            val time = System.currentTimeMillis()
 
-        // 2. Mouse Released
-        val releaseEvent = MouseEvent(
-            window,
-            MouseEvent.MOUSE_RELEASED,
-            time + 10,
-            InputEvent.BUTTON1_DOWN_MASK,
-            x,
-            y,
-            1,
-            false,
-            MouseEvent.BUTTON1
-        )
-        window.dispatchEvent(releaseEvent)
-
-        // 3. Mouse Clicked
-        val clickEvent = MouseEvent(
-            window,
-            MouseEvent.MOUSE_CLICKED,
-            time + 11,
-            0,
-            x,
-            y,
-            1,
-            false,
-            MouseEvent.BUTTON1
-        )
-        window.dispatchEvent(clickEvent)
+            queue.postEvent(
+                MouseEvent(
+                    target,
+                    MouseEvent.MOUSE_PRESSED,
+                    time,
+                    InputEvent.BUTTON1_DOWN_MASK,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1
+                )
+            )
+            queue.postEvent(
+                MouseEvent(
+                    target,
+                    MouseEvent.MOUSE_RELEASED,
+                    time + 10,
+                    0,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1
+                )
+            )
+            queue.postEvent(
+                MouseEvent(
+                    target,
+                    MouseEvent.MOUSE_CLICKED,
+                    time + 11,
+                    0,
+                    point.x,
+                    point.y,
+                    1,
+                    false,
+                    MouseEvent.BUTTON1
+                )
+            )
+        }
     }
 }
 

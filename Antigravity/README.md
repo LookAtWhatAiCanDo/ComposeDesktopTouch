@@ -22,17 +22,19 @@ The repository is organized into the following modules:
   allowing modular, decoupled integration.
 * **Non-Windows Safe**: Safe to include in multi-platform desktop apps; acts as
   a clean compiled no-op on macOS and Linux.
-* **Proper Coordinate Transformation**: Translates screen coordinates using the
-  specific drawing canvas HWND (`SunAwtCanvas`) client space, aligning
-  perfectly with Compose's `LayoutCoordinates.boundsInWindow()`.
+* **Proper Coordinate Transformation**: Translates screen coordinates to the
+  root frame HWND's client space, aligning perfectly with Compose's
+  `LayoutCoordinates.boundsInWindow()` regardless of which child HWND received
+  the native message.
 * **Velocity-Based Momentum Fling**: Incorporates Compose's native
   `VelocityTracker` and `splineBasedDecay` animations to deliver an organic,
   high-performance scroll physics experience.
 * **Interrupted Fling**: Instantly cancels active fling animations on a new
   touch-down event, mirroring modern mobile OS touch interactions.
 * **Tap-to-Click Propagation**: Automatically detects fast taps (<300ms, <10px
-  displacement) and dispatches synthesized `MouseEvent`s through the Swing
-  dispatcher to trigger buttons and selectable cards normally.
+  displacement) and dispatches synthesized `MouseEvent`s directly to the deepest
+  Swing component under the contact, resolving DPI scaling and window insets
+  correctly to trigger buttons and select list items.
 * **Z-Order Dialog Handling**: Bypasses touch consumption on registered dialog
   overlays and scrims (`Modifier.touchScrim`), giving them priority and
   delegating event routing back to native Windows mouse-promotion for standard
@@ -113,11 +115,15 @@ implements a three-tier pointer interception pipeline:
    of all registered containers in **reverse composition order** (the last
    composed elements / front-most overlays are hit-tested first).
 3. **Selective Event Consumption**:
-   * **Scrollable Containers (`Modifier.touchScrollable`)**: If the touch-down
-     coordinate falls inside a registered scrollable bounds, the `pointerId` is
-     captured, and subsequent movement/up events are consumed (`LRESULT(0)`).
-     Raw movements are routed directly to the Compose scroll animation pipeline
-     to drive 1:1 dragging and velocity-based momentum flinging.
+    * **Scrollable Containers (`Modifier.touchScrollable`)**: If the touch-down
+      coordinate falls inside a registered scrollable bounds, the `pointerId` is
+      captured, and subsequent movement/up events are consumed (`LRESULT(0)`).
+      Raw movements are routed directly to the Compose scroll animation pipeline
+      to drive 1:1 dragging and velocity-based momentum flinging. On quick release
+      (tap), the library scales the coordinates for DPI, compensates for window
+      insets, resolves the deepest target AWT component, and dispatches synthesized
+      AWT mouse events (pressed, released, clicked) directly to it to trigger list
+      item selections and button clicks normally.
    * **Scrims & Dialogs (`Modifier.touchScrim`)**: If the touch-down coordinate
      falls inside a registered dialog scrim, it matches the scrim region first
      due to reverse order hit-testing. However, because scrims are registered

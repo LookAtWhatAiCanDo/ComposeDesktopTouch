@@ -53,6 +53,9 @@ fun main() = application {
         var overlayScrollHookEnabled by remember { mutableStateOf(true) }
         var scrimEnabled by remember { mutableStateOf(true) }
         
+        var selectedLazyItem by remember { mutableStateOf(-1) }
+        var selectedRegularItem by remember { mutableStateOf(-1) }
+        
         var touchEvents by remember { mutableStateOf(emptyList<TouchEvent>()) }
         var hookInstallation by remember { mutableStateOf<TouchInstallation?>(null) }
         var eventListBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
@@ -257,10 +260,17 @@ fun main() = application {
                                         verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         items(200) { index ->
+                                            val isSelected = selectedLazyItem == index
                                             Card(
-                                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(48.dp)
+                                                    .clickable { selectedLazyItem = index },
                                                 shape = RoundedCornerShape(8.dp),
-                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2633))
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.2f) else Color(0xFF1F2633)
+                                                ),
+                                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF)) else null
                                             ) {
                                                 Box(
                                                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -331,16 +341,23 @@ fun main() = application {
                                         verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         for (index in 0 until 50) {
+                                            val isSelected = selectedRegularItem == index
                                             Card(
-                                                modifier = Modifier.fillMaxWidth().height(60.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(60.dp)
+                                                    .clickable { selectedRegularItem = index },
                                                 shape = RoundedCornerShape(8.dp),
-                                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2633))
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.2f) else Color(0xFF1F2633)
+                                                ),
+                                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF)) else null
                                             ) {
                                                 Box(
                                                     modifier = Modifier.fillMaxSize(),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    Text("Scrollable Block #$index", color = Color.White, fontSize = 14.sp)
+                                                    Text("Scrollable Block #$index", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 14.sp)
                                                 }
                                             }
                                         }

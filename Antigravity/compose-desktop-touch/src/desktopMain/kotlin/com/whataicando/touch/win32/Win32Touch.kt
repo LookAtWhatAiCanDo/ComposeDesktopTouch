@@ -185,7 +185,7 @@ object Win32TouchRegistry {
                                     val isCaptured = activePointerIds.contains(pointerId)
 
                                     val shouldConsume = if (uMsg == WM_POINTERDOWN) {
-                                        val matchedRegion = hitTest(rootHwnd, ptChild.x, ptChild.y)
+                                        val matchedRegion = hitTest(rootHwnd, ptRoot.x, ptRoot.y)
                                         if (matchedRegion != null && matchedRegion.consumeTouch) {
                                             activePointerIds.add(pointerId)
                                             true
@@ -212,8 +212,8 @@ object Win32TouchRegistry {
                                         val event = TouchEvent(
                                             id = pointerId,
                                             phase = phase,
-                                            xPx = ptChild.x.toFloat(),
-                                            yPx = ptChild.y.toFloat(),
+                                            xPx = ptRoot.x.toFloat(),
+                                            yPx = ptRoot.y.toFloat(),
                                             timeMs = pointerInfo.dwTime.toLong() and 0xFFFFFFFFL
                                         )
 
